@@ -5,7 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/akshelstad/pokedexcli/internal/pokeapi"
 )
+
+type config struct {
+	pokeapiClient       pokeapi.Client
+	nextLocationAreaURL *string
+	prevLocationAreaURL *string
+	caughtPokemon       map[string]pokeapi.Pokemon
+}
 
 func startRepl(cfg *config) {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -23,12 +32,16 @@ func startRepl(cfg *config) {
 			continue
 		}
 		commandName := cleaned[0]
+		args := []string{}
+		if len(cleaned) > 1 {
+			args = cleaned[1:]
+		}
 
 		availableCommands := getCommands()
 
 		command, ok := availableCommands[commandName]
 		if ok {
-			err := command.callback(cfg)
+			err := command.callback(cfg, args...)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -43,7 +56,7 @@ func startRepl(cfg *config) {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, ...string) error
 }
 
 func getCommands() map[string]cliCommand {
@@ -62,6 +75,26 @@ func getCommands() map[string]cliCommand {
 			name:        "mapb",
 			description: "Lists the previous 20 location areas. Repeat to list the previous 20.",
 			callback:    callbackMapB,
+		},
+		"explore": {
+			name:        "explore",
+			description: "Pass a location area as an argument to retrieve a list of pokemon in the location area",
+			callback:    callbackExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Throw a pokeball at a pokemon and try to catch it",
+			callback:    callbackCatch,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "Lists information from the pokedex about a pokemon that you have caught",
+			callback:    callbackInspect,
+		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Lists all the pokemon in the pokedex that you have caught",
+			callback:    callbackPokedex,
 		},
 		"exit": {
 			name:        "exit",
